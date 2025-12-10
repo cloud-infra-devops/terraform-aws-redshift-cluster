@@ -31,7 +31,25 @@ variable "generate_password" {
 variable "node_type" {
   description = "Redshift node type"
   type        = string
-  default     = "dc2.large"
+  default     = "ra3.xlplus"
+  validation {
+    condition     = contains(var.allowed_node_types, var.node_type)
+    error_message = "node_type '${var.node_type}' is not in allowed_node_types. Update var.node_type or allowed_node_types for your region/account."
+  }
+}
+
+variable "allowed_node_types" {
+  description = "Optional whitelist of node types the module will accept. Adjust for your account/region."
+  type        = list(string)
+  default = [
+    "ra3.xlplus",
+    "ra3.4xlarge",
+    "ra3.16xlarge",
+    "dc2.large",
+    "dc2.8xlarge",
+    "ds2.xlarge",
+    "ds2.8xlarge"
+  ]
 }
 
 variable "cluster_type" {
@@ -83,7 +101,7 @@ variable "s3_bucket_name" {
 variable "s3_key_prefix" {
   description = "Prefix within the S3 bucket for Redshift logs"
   type        = string
-  default     = "redshift-logs/"
+  default     = "redshift/logs/"
 }
 
 variable "enable_cloudwatch_alarms" {

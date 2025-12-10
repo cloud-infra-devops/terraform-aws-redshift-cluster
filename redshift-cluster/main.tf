@@ -265,7 +265,7 @@ resource "aws_redshift_cluster" "this" {
 
 # Redshift logging configuration (separate resource)
 resource "aws_redshift_logging" "this" {
-  depends_on           = [local.s3_bucket_to_use, aws_redshift_cluster.this]
+  depends_on           = [local.effective_logging_bucket, aws_redshift_cluster.this]
   count                = local.use_s3_logs ? 1 : 0
   cluster_identifier   = aws_redshift_cluster.this.cluster_identifier
   log_destination_type = var.log_destination
