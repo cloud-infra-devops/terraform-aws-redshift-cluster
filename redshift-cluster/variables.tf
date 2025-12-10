@@ -171,12 +171,6 @@ variable "force_destroy_s3_bucket" {
   default     = false
 }
 
-# variable "region" {
-#   description = "AWS region (optional - can be inherited from provider)"
-#   type        = string
-#   default     = ""
-# }
-
 variable "rotation_enabled" {
   description = "Whether to enable Secrets Manager rotation using the provided Lambda rotation function"
   type        = bool
@@ -186,7 +180,7 @@ variable "rotation_enabled" {
 variable "rotation_schedule_days" {
   description = "Rotation schedule in days"
   type        = number
-  default     = 180
+  default     = 1
 }
 
 variable "cw_logs_retention_days" {

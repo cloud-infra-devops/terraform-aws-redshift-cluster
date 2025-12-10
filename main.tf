@@ -16,7 +16,7 @@ module "redshift" {
   preferred_maintenance_window = "sun:23:00-mon:01:00"
 
   rotation_enabled       = true
-  rotation_schedule_days = 180
+  rotation_schedule_days = 1
 
   tags = {
     Environment = "dev"
