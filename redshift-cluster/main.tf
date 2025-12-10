@@ -83,9 +83,9 @@ locals {
   })
 }
 
-# provider "aws" {
-#   region = var.region != "" ? var.region : null
-# }
+resource "random_id" "index" {
+  byte_length = 2
+}
 
 resource "random_password" "master" {
   count            = var.generate_password && !local.master_password_provided ? 1 : 0
@@ -96,7 +96,7 @@ resource "random_password" "master" {
 
 # Secrets Manager secret (no version yet)
 resource "aws_secretsmanager_secret" "this" {
-  name        = "${var.cluster_identifier}-credentials"
+  name        = "${var.cluster_identifier}-credentials-${random_id.index.hex}"
   description = "Redshift cluster credentials for ${var.cluster_identifier}"
   tags = merge(var.tags, {
     "redshift-cluster" = var.cluster_identifier
@@ -273,7 +273,7 @@ resource "aws_redshift_cluster" "this" {
 
 # After cluster exists, create/update Secrets Manager secret version with full details (credentials + endpoint/jdbc)
 resource "aws_secretsmanager_secret_version" "this" {
-  depends_on = [aws_redshift_cluster.this]
+  depends_on = [aws_secretsmanager_secret.this, aws_redshift_cluster.this]
   secret_id  = aws_secretsmanager_secret.this.id
   secret_string = jsonencode({
     username = var.master_username
