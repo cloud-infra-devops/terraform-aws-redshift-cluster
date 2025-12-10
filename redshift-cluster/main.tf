@@ -267,7 +267,7 @@ resource "aws_redshift_cluster" "this" {
 resource "aws_redshift_logging" "this" {
   depends_on           = [local.s3_bucket_to_use, aws_redshift_cluster.this]
   count                = local.use_s3_logs ? 1 : 0
-  cluster_identifier   = aws_redshift_cluster.this[0].cluster_identifier
+  cluster_identifier   = aws_redshift_cluster.this.cluster_identifier
   log_destination_type = var.log_destination
   bucket_name          = local.effective_logging_bucket != "" ? local.effective_logging_bucket : null
   s3_key_prefix        = var.s3_key_prefix != "" ? var.s3_key_prefix : null
@@ -280,7 +280,7 @@ resource "aws_secretsmanager_secret_version" "this" {
   secret_id  = aws_secretsmanager_secret.this.id
   secret_string = jsonencode({
     username = var.master_username
-    password = local.master_password_provided ? var.master_password : (random_password.master.count > 0 ? random_password.master[0].result : var.master_password)
+    password = local.master_password_provided ? var.master_password : (length(random_password.master) > 0 ? random_password.master[0].result : var.master_password)
     engine   = "redshift"
     host     = aws_redshift_cluster.this.endpoint
     port     = aws_redshift_cluster.this.port
