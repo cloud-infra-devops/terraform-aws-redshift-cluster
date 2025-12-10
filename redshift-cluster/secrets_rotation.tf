@@ -239,19 +239,20 @@ resource "aws_lambda_permission" "allow_secretsmanager_invoke" {
   principal     = "secretsmanager.amazonaws.com"
   source_arn    = aws_secretsmanager_secret.this.arn
   # Qualifier targets the published version created by publish = true above.
-  # qualifier = aws_lambda_function.rotation[0].version
+  qualifier = aws_lambda_function.rotation[0].version
 }
 
-# Secrets Manager rotation configuration (single-user rotation strategy)
+# Use the published version ARN (function ARN + ":" + version) for rotation configuration.
 resource "aws_secretsmanager_secret_rotation" "rotation" {
-  # Ensure Secrets Manager rotation resource is created after the lambda permission so SM can invoke the function
   depends_on = [
     aws_lambda_permission.allow_secretsmanager_invoke,
     aws_iam_role_policy.rotation_lambda_policy_attach
   ]
-  count               = var.rotation_enabled ? 1 : 0
-  secret_id           = aws_secretsmanager_secret.this.id
-  rotation_lambda_arn = aws_lambda_function.rotation[0].arn
+  count = var.rotation_enabled ? 1 : 0
+
+  secret_id = aws_secretsmanager_secret.this.id
+  # IMPORTANT: use the versioned Lambda ARN so Secrets Manager invokes the exact version the permission covers
+  rotation_lambda_arn = "${aws_lambda_function.rotation[0].arn}:${aws_lambda_function.rotation[0].version}"
   rotation_rules {
     automatically_after_days = var.rotation_schedule_days
   }
