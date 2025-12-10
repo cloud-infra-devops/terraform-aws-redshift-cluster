@@ -1,0 +1,2 @@
+# This rotation handler uses boto3 which is available in the AWS Lambda runtime by default.
+# If you add external packages, you'll need to vendor them into the zip.
