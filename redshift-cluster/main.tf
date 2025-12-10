@@ -264,15 +264,15 @@ resource "aws_redshift_cluster" "this" {
 }
 
 # Redshift logging configuration (separate resource)
-resource "aws_redshift_logging" "this" {
-  depends_on           = [local.effective_logging_bucket, aws_redshift_cluster.this]
-  count                = local.use_s3_logs ? 1 : 0
-  cluster_identifier   = aws_redshift_cluster.this.cluster_identifier
-  log_destination_type = var.log_destination
-  bucket_name          = local.effective_logging_bucket != "" ? local.effective_logging_bucket : null
-  s3_key_prefix        = var.s3_key_prefix != "" ? var.s3_key_prefix : null
-  log_exports          = []
-}
+# resource "aws_redshift_logging" "this" {
+#   depends_on           = [local.effective_logging_bucket, aws_redshift_cluster.this]
+#   count                = local.use_s3_logs ? 1 : 0
+#   cluster_identifier   = aws_redshift_cluster.this.cluster_identifier
+#   log_destination_type = var.log_destination
+#   bucket_name          = local.effective_logging_bucket != "" ? local.effective_logging_bucket : null
+#   s3_key_prefix        = var.s3_key_prefix != "" ? var.s3_key_prefix : null
+#   log_exports          = []
+# }
 
 # After cluster exists, create/update Secrets Manager secret version with full details (credentials + endpoint/jdbc)
 resource "aws_secretsmanager_secret_version" "this" {

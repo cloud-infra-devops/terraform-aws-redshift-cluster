@@ -157,16 +157,18 @@ resource "aws_iam_role" "rotation_lambda" {
 
 # Create the Lambda function
 resource "aws_lambda_function" "rotation" {
-  count = var.rotation_enabled ? 1 : 0
+  depends_on = [aws_iam_role.rotation_lambda]
+  count      = var.rotation_enabled ? 1 : 0
 
-  filename      = data.archive_file.rotation_zip.output_path
-  function_name = "${var.cluster_identifier}-secrets-rotation"
-  handler       = "rotation_handler.lambda_handler"
-  runtime       = "python3.12"
-  role          = aws_iam_role.rotation_lambda[0].arn
-  timeout       = 300
-  publish       = true
-  architectures = ["x86_64"]
+  filename         = data.archive_file.rotation_zip.output_path
+  source_code_hash = data.archive_file.rotation_zip.output_base64sha256
+  function_name    = "${var.cluster_identifier}-secrets-rotation"
+  handler          = "rotation_handler.lambda_handler"
+  runtime          = "python3.12"
+  role             = aws_iam_role.rotation_lambda[0].arn
+  timeout          = 300
+  publish          = true
+  architectures    = ["x86_64"]
   ephemeral_storage {
     size = 1024
   }
@@ -188,7 +190,7 @@ data "aws_iam_policy_document" "rotation_lambda_policy" {
       {
         sid       = "AllowLambdaWriteLogs"
         actions   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        resources = ["arn:aws:logs:${data.aws_region.current.region != "" ? data.aws_region.current.region : data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
+        resources = ["arn:aws:logs:${data.aws_region.current.region != "" ? data.aws_region.current.region : data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
       },
       {
         sid       = "AllowSecretsManager"
@@ -198,7 +200,7 @@ data "aws_iam_policy_document" "rotation_lambda_policy" {
       {
         sid       = "AllowRedshiftModify"
         actions   = ["redshift:ModifyCluster", "redshift:DescribeClusters"]
-        resources = ["arn:aws:redshift:${data.aws_region.current.region != "" ? data.aws_region.current.region : data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:cluster:${var.cluster_identifier}"]
+        resources = ["arn:aws:redshift:${data.aws_region.current.region != "" ? data.aws_region.current.region : data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:cluster:${var.cluster_identifier}"]
       },
       {
         sid       = "AllowKMS"
@@ -237,7 +239,7 @@ resource "aws_lambda_permission" "allow_secretsmanager_invoke" {
   principal     = "secretsmanager.amazonaws.com"
   source_arn    = aws_secretsmanager_secret.this.arn
   # Qualifier targets the published version created by publish = true above.
-  qualifier = aws_lambda_function.rotation[0].version
+  # qualifier = aws_lambda_function.rotation[0].version
 }
 
 # Secrets Manager rotation configuration (single-user rotation strategy)
