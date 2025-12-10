@@ -298,6 +298,6 @@ resource "aws_secretsmanager_secret_version" "this" {
     host     = aws_redshift_cluster.this.endpoint
     port     = aws_redshift_cluster.this.port
     dbname   = var.database_name
-    jdbc     = "jdbc:redshift://${aws_redshift_cluster.this.endpoint}:${aws_redshift_cluster.this.port}/${var.database_name}"
+    jdbc     = "jdbc:redshift://${aws_redshift_cluster.this.endpoint}:/${var.database_name}"
   })
 }
