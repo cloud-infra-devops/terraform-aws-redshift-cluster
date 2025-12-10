@@ -228,7 +228,7 @@ resource "aws_redshift_cluster" "this" {
   database_name      = var.database_name
   master_username    = var.master_username
 
-  master_password = local.master_password_provided ? var.master_password : (random_password.master.count > 0 ? random_password.master[0].result : var.master_password)
+  master_password = local.master_password_provided ? var.master_password : (length(random_password.master) > 0 ? random_password.master[0].result : var.master_password)
 
   node_type       = var.node_type
   cluster_type    = var.cluster_type
