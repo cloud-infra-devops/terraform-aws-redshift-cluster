@@ -64,6 +64,10 @@ variable "number_of_nodes" {
   default     = 2
 }
 
+variable "enhanced_vpc_routing" {
+  type    = bool
+  default = true
+}
 variable "subnet_ids" {
   description = "List of subnet IDs in the existing VPC for Redshift subnet group"
   type        = list(string)
@@ -86,6 +90,21 @@ variable "log_destination" {
   default     = "s3"
 }
 
+variable "automated_snapshot_retention_period" {
+  description = "Automated snapshot retention period (days). Set 0 to disable."
+  type        = number
+  default     = 1
+}
+variable "skip_final_snapshot" {
+  description = "Whether to skip creating a final snapshot when the Redshift cluster is deleted. If true, no final snapshot is created. If false, you MUST provide final_snapshot_identifier."
+  type        = bool
+  default     = true
+}
+variable "final_snapshot_identifier" {
+  description = "Name for the final snapshot to create when deleting the cluster. Required if skip_final_snapshot = false."
+  type        = string
+  default     = ""
+}
 variable "create_s3_bucket" {
   description = "When true and log_destination is 's3', create the S3 bucket for logs"
   type        = bool

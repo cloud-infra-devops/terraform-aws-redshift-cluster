@@ -240,26 +240,23 @@ resource "aws_redshift_cluster" "this" {
 
   iam_roles = [aws_iam_role.redshift.arn]
 
-  encrypted  = true
-  kms_key_id = var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.logs_key) > 0 ? aws_kms_key.logs_key[0].arn : null)
-
-  # Logging block compatible with provider v6.x
-  # dynamic "logging" {
-  #   for_each = var.log_destination == "s3" ? [1] : []
-  #   content {
-  #     enable        = true
-  #     bucket_name   = var.create_s3_bucket ? aws_s3_bucket.logs[0].bucket : var.s3_bucket_name
-  #     s3_key_prefix = var.s3_key_prefix
-  #   }
-  # }
-
+  encrypted                           = true
+  kms_key_id                          = var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.logs_key) > 0 ? aws_kms_key.logs_key[0].arn : null)
+  allow_version_upgrade               = true
+  apply_immediately                   = false
+  enhanced_vpc_routing                = var.enhanced_vpc_routing
+  automated_snapshot_retention_period = var.automated_snapshot_retention_period
+  # Final snapshot behaviour for deletes/replacements
+  skip_final_snapshot       = var.skip_final_snapshot
+  final_snapshot_identifier = var.skip_final_snapshot ? null : (var.final_snapshot_identifier != "" ? var.final_snapshot_identifier : null)
+  tags                      = var.tags
   # Maintenance window
   preferred_maintenance_window = var.enable_maintenance_window ? var.preferred_maintenance_window : null
 
-  tags = var.tags
-
   lifecycle {
-    ignore_changes = [iam_roles] # allow external role attachments without forcing recreation
+    # master_password rotations are done via secrets manager; prevent accidental re-creation from password rotation
+    # allow external role attachments without forcing recreation
+    ignore_changes = [iam_roles, master_password]
   }
 }
 
