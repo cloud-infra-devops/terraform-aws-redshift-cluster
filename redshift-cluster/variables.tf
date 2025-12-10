@@ -16,10 +16,28 @@ variable "master_username" {
 }
 
 variable "master_password" {
-  description = "Master password for the Redshift cluster. If empty, it will be generated."
+  description = <<EOT
+Master password for the Redshift cluster. If empty, a secure password will be generated.
+Constraints (when provided):
+- 8..64 characters
+- Must contain at least one uppercase letter, one lowercase letter and one digit
+- Must NOT contain any of these characters: / @ \" space \\ '
+EOT
   type        = string
   default     = ""
   sensitive   = true
+
+  validation {
+    condition = var.master_password == "" || (
+      length(var.master_password) >= 8 &&
+      length(var.master_password) <= 64 &&
+      can(regex("[A-Z]", var.master_password)) &&      # has uppercase
+      can(regex("[a-z]", var.master_password)) &&      # has lowercase
+      can(regex("[0-9]", var.master_password)) &&      # has digit
+      !can(regex("[/@\"\\\\' ]", var.master_password)) # does NOT contain forbidden chars: / @ " \ ' or space
+    )
+    error_message = "master_password must be empty (to auto-generate) or 8-64 chars, include at least one upper, one lower, one digit, and must not contain / @ \" \\ ' or spaces."
+  }
 }
 
 variable "generate_password" {

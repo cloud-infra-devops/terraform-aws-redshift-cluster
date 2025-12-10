@@ -88,10 +88,26 @@ resource "random_id" "index" {
 }
 
 resource "random_password" "master" {
-  count            = var.generate_password && !local.master_password_provided ? 1 : 0
-  length           = 24
+  count = var.generate_password && !local.master_password_provided ? 1 : 0
+
+  # Choose length between 16 and 32 by default (Redshift requires 8..64)
+  length = 16
+
+  # Ensure upper, lower and numeric characters are present (Redshift requires at least one of each)
+  upper   = true
+  lower   = true
+  numeric = true
+
+  # Provide a safe override of special characters that avoids Redshift-disallowed characters:
+  # Forbidden characters per Redshift API: / @ "  space  \  '
+  # So we intentionally exclude those from override.
   special          = true
-  override_special = "!#$%&()*+,-.:;<=>?[\\]^_{|}~" # excludes / @ " and includes allowed specials
+  override_special = "!#$%&()*-_=+[]{}<>?.,:;~`|"
+}
+
+# Use generated password or provided one
+locals {
+  generated_master_password = length(random_password.master) > 0 ? random_password.master[0].result : ""
 }
 
 # Secrets Manager secret (no version yet)
@@ -229,7 +245,7 @@ resource "aws_redshift_cluster" "this" {
   database_name      = var.database_name
   master_username    = var.master_username
 
-  master_password = local.master_password_provided ? var.master_password : (length(random_password.master) > 0 ? random_password.master[0].result : var.master_password)
+  master_password = local.master_password_provided ? var.master_password : local.generated_master_password
 
   node_type       = var.node_type
   cluster_type    = var.cluster_type
@@ -277,7 +293,7 @@ resource "aws_secretsmanager_secret_version" "this" {
   secret_id  = aws_secretsmanager_secret.this.id
   secret_string = jsonencode({
     username = var.master_username
-    password = local.master_password_provided ? var.master_password : (length(random_password.master) > 0 ? random_password.master[0].result : var.master_password)
+    password = local.master_password_provided ? var.master_password : local.generated_master_password
     engine   = "redshift"
     host     = aws_redshift_cluster.this.endpoint
     port     = aws_redshift_cluster.this.port
