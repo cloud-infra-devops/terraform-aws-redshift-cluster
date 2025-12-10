@@ -9,6 +9,7 @@ locals {
   use_existing_kms          = length(trimspace(var.kms_key_id)) > 0
   use_s3_logs               = var.log_destination == "s3"
   s3_bucket_to_use          = var.create_s3_bucket ? "" : var.s3_bucket_name
+  effective_logging_bucket  = local.use_s3_logs ? (var.create_s3_bucket ? aws_s3_bucket.logs[0].bucket : var.s3_bucket_name) : ""
   master_password_provided  = length(trimspace(var.master_password)) > 0
 
   # account and region
@@ -243,14 +244,14 @@ resource "aws_redshift_cluster" "this" {
   kms_key_id = var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.logs_key) > 0 ? aws_kms_key.logs_key[0].arn : null)
 
   # Logging block compatible with provider v6.x
-  dynamic "logging" {
-    for_each = var.log_destination == "s3" ? [1] : []
-    content {
-      enable        = true
-      bucket_name   = var.create_s3_bucket ? aws_s3_bucket.logs[0].bucket : var.s3_bucket_name
-      s3_key_prefix = var.s3_key_prefix
-    }
-  }
+  # dynamic "logging" {
+  #   for_each = var.log_destination == "s3" ? [1] : []
+  #   content {
+  #     enable        = true
+  #     bucket_name   = var.create_s3_bucket ? aws_s3_bucket.logs[0].bucket : var.s3_bucket_name
+  #     s3_key_prefix = var.s3_key_prefix
+  #   }
+  # }
 
   # Maintenance window
   preferred_maintenance_window = var.enable_maintenance_window ? var.preferred_maintenance_window : null
@@ -260,6 +261,17 @@ resource "aws_redshift_cluster" "this" {
   lifecycle {
     ignore_changes = [iam_roles] # allow external role attachments without forcing recreation
   }
+}
+
+# Redshift logging configuration (separate resource)
+resource "aws_redshift_logging" "this" {
+  depends_on           = [local.s3_bucket_to_use, aws_redshift_cluster.this]
+  count                = local.use_s3_logs ? 1 : 0
+  cluster_identifier   = aws_redshift_cluster.this[0].cluster_identifier
+  log_destination_type = var.log_destination
+  bucket_name          = local.effective_logging_bucket != "" ? local.effective_logging_bucket : null
+  s3_key_prefix        = var.s3_key_prefix != "" ? var.s3_key_prefix : null
+  log_exports          = []
 }
 
 # After cluster exists, create/update Secrets Manager secret version with full details (credentials + endpoint/jdbc)
