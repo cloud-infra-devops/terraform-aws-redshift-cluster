@@ -90,8 +90,8 @@ resource "random_id" "index" {
 resource "random_password" "master" {
   count            = var.generate_password && !local.master_password_provided ? 1 : 0
   length           = 24
-  override_special = "!@#%^&*()-_=+[]{}<>?"
   special          = true
+  override_special = "!#$%&()*+,-.:;<=>?[\\]^_{|}~" # excludes / @ " and includes allowed specials
 }
 
 # Secrets Manager secret (no version yet)
