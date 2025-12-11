@@ -30,5 +30,5 @@ output "s3_log_bucket_name" {
 
 output "kms_key_arn" {
   description = "KMS key ARN used for logs/cluster"
-  value       = var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.logs_key) > 0 ? aws_kms_key.logs_key[0].arn : "")
+  value       = var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.kms_cmk_key) > 0 ? aws_kms_key.kms_cmk_key[0].arn : "")
 }

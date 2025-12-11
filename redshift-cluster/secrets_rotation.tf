@@ -155,7 +155,7 @@ data "archive_file" "rotation_zip" {
   output_path = "${path.module}/lambda/rotation.zip"
 
   source {
-    content  = file("${path.module}/lambda/rotation_handler.py")
+    content  = file("${path.module}/rotation_handler.py")
     filename = "rotation_handler.py"
   }
 }
@@ -182,7 +182,8 @@ data "archive_file" "rotation_zip" {
 # Here we use the AWS managed rotation function hosted as a Lambda in your account via a published blueprint package.
 
 resource "aws_iam_role" "lambda_exec" {
-  name = "${var.cluster_identifier}-lambda-exec-role"
+  count = var.enable_auto_secrets_rotation ? 1 : 0
+  name  = "${var.cluster_identifier}-lambda-exec-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
@@ -195,16 +196,16 @@ resource "aws_iam_role" "lambda_exec" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_vpc_access_attachment" {
-  role       = aws_iam_role.lambda_exec.name
+  role       = aws_iam_role.lambda_exec[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 resource "aws_iam_role_policy_attachment" "lambda_basic_exec_policy_attachment" {
-  role       = aws_iam_role.lambda_exec.name
+  role       = aws_iam_role.lambda_exec[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 resource "aws_iam_role_policy_attachment" "lambda_custom_exec_policy_attachment" {
   depends_on = [aws_iam_role_policy.rotation_lambda_policy_attachment]
-  role       = aws_iam_role.lambda_exec.name
+  role       = aws_iam_role.lambda_exec[0].name
   policy_arn = aws_iam_role_policy.rotation_lambda_policy_attachment[0].arn
 }
 # Allow Lambda access to VPC for Secrets Manager VPC Endpoint
@@ -362,7 +363,7 @@ resource "aws_secretsmanager_secret_policy" "secret_policy" {
         Sid    = "AllowRotationRoleAccess"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.rotation_lambda[0].arn
+          AWS = aws_iam_role.lambda_exec[0].arn
         }
         Action = [
           "secretsmanager:GetSecretValue",

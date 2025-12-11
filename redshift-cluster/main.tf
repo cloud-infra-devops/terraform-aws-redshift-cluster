@@ -18,7 +18,7 @@ locals {
   region = data.aws_region.current.region
 
   # rotation lambda role arn only present when rotation_enabled and role count > 0
-  rotation_role_arn = var.enable_auto_secrets_rotation && length(aws_iam_role.rotation_lambda) > 0 ? aws_iam_role.rotation_lambda[0].arn : ""
+  rotation_role_arn = var.enable_auto_secrets_rotation && length(aws_iam_role.lambda_exec) > 0 ? aws_iam_role.lambda_exec[0].arn : ""
 
   # list of IAM principals (Redshift role + optional rotation lambda role)
   iam_principals = compact([aws_iam_role.redshift.arn, local.rotation_role_arn])
@@ -149,7 +149,7 @@ resource "aws_s3_bucket" "logs" {
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
-        kms_master_key_id = local.use_existing_kms ? var.kms_key_id : aws_kms_key.logs_key[0].arn
+        kms_master_key_id = local.use_existing_kms ? var.kms_key_id : aws_kms_key.kms_cmk_key[0].arn
         sse_algorithm     = "aws:kms"
       }
     }
@@ -258,7 +258,7 @@ resource "aws_redshift_cluster" "this" {
   iam_roles = [aws_iam_role.redshift.arn]
 
   encrypted                           = true
-  kms_key_id                          = var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.logs_key) > 0 ? aws_kms_key.logs_key[0].arn : null)
+  kms_key_id                          = var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.kms_cmk_key) > 0 ? aws_kms_key.kms_cmk_key[0].arn : null)
   allow_version_upgrade               = true
   apply_immediately                   = false
   enhanced_vpc_routing                = var.enhanced_vpc_routing
