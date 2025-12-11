@@ -6,13 +6,12 @@ variable "cluster_identifier" {
 variable "database_name" {
   description = "Initial DB name for the cluster"
   type        = string
-  default     = "dev"
+  default     = "sbx"
 }
 
 variable "master_username" {
   description = "Master username for the Redshift cluster"
   type        = string
-  default     = "admin"
 }
 
 variable "master_password" {
@@ -86,6 +85,13 @@ variable "enhanced_vpc_routing" {
   type    = bool
   default = true
 }
+
+variable "vpc_id" {
+  type = string
+}
+variable "vpc_cidr" {
+  type = string
+}
 variable "subnet_ids" {
   description = "List of subnet IDs in the existing VPC for Redshift subnet group"
   type        = list(string)
@@ -96,6 +102,28 @@ variable "security_group_ids" {
   type        = list(string)
 }
 
+variable "use_existing_vpce_sg" {
+  type = bool
+}
+variable "existing_vpce_security_group_ids" {
+  description = "Existing Security group IDs allowed for VPC Interface Endpoint"
+  type        = list(string)
+  # default     = []
+}
+variable "use_existing_lambda_rotator_sg" {
+  type = bool
+}
+variable "existing_lambda_rotator_security_group_ids" {
+  description = "Existing Security group IDs for the rotation Lambda when placed in VPC. Must be provided if subnet_ids is provided."
+  type        = list(string)
+  # default     = []
+}
+
+variable "port" {
+  description = "default Redshift DB port."
+  type        = number
+  default     = 5439
+}
 variable "cluster_subnet_group_name" {
   description = "Optional existing Redshift subnet group name. If empty, module will create one."
   type        = string
@@ -189,7 +217,7 @@ variable "force_destroy_s3_bucket" {
   default     = false
 }
 
-variable "rotation_enabled" {
+variable "enable_auto_secrets_rotation" {
   description = "Whether to enable Secrets Manager rotation using the provided Lambda rotation function"
   type        = bool
   default     = true

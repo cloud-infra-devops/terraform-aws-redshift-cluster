@@ -8,7 +8,7 @@ resource "aws_cloudwatch_log_group" "redshift_logs" {
 }
 
 resource "aws_cloudwatch_log_group" "lambda_rotation_logs" {
-  count = var.rotation_enabled ? 1 : 0
+  count = var.enable_auto_secrets_rotation ? 1 : 0
 
   name              = "/aws/lambda/${var.cluster_identifier}-rotation-lambda"
   retention_in_days = var.cw_logs_retention_days

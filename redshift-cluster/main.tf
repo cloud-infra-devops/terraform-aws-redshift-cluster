@@ -18,7 +18,7 @@ locals {
   region = data.aws_region.current.region
 
   # rotation lambda role arn only present when rotation_enabled and role count > 0
-  rotation_role_arn = var.rotation_enabled && length(aws_iam_role.rotation_lambda) > 0 ? aws_iam_role.rotation_lambda[0].arn : ""
+  rotation_role_arn = var.enable_auto_secrets_rotation && length(aws_iam_role.rotation_lambda) > 0 ? aws_iam_role.rotation_lambda[0].arn : ""
 
   # list of IAM principals (Redshift role + optional rotation lambda role)
   iam_principals = compact([aws_iam_role.redshift.arn, local.rotation_role_arn])
@@ -120,7 +120,7 @@ resource "aws_secretsmanager_secret" "this" {
 }
 
 # KMS key for logs & cluster encryption (created if not provided)
-resource "aws_kms_key" "logs_key" {
+resource "aws_kms_key" "kms_cmk_key" {
   depends_on              = [local.use_existing_kms]
   count                   = local.use_existing_kms ? 0 : 1
   description             = "KMS key for Redshift logs and cluster '${var.cluster_identifier}'"
@@ -133,6 +133,7 @@ resource "aws_kms_key" "logs_key" {
 }
 
 resource "aws_kms_alias" "logs_key_alias" {
+  depends_on    = [aws_kms_key.kms_cmk_key]
   count         = local.use_existing_kms || length(trimspace(var.kms_key_alias)) == 0 ? 0 : 1
   name          = "alias/${var.kms_key_alias}"
   target_key_id = aws_kms_key.logs_key[0].key_id
