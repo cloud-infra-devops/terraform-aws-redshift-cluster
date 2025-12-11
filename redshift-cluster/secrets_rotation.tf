@@ -204,9 +204,8 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_exec_policy_attachment" 
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 resource "aws_iam_role_policy_attachment" "lambda_custom_exec_policy_attachment" {
-  depends_on = [aws_iam_role_policy.rotation_lambda_policy_attachment]
   role       = aws_iam_role.lambda_exec[0].name
-  policy_arn = aws_iam_role_policy.rotation_lambda_policy_attachment[0].arn
+  policy_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.cluster_identifier}-rotation-lambda-policy"
 }
 # Allow Lambda access to VPC for Secrets Manager VPC Endpoint
 resource "aws_iam_role_policy" "lambda_vpc" {
