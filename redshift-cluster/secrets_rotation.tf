@@ -3,7 +3,7 @@
 # to the specific published Lambda version (qualifier) that we created.
 locals {
   vpce_sg_ids           = var.use_existing_vpce_sg && length(var.existing_vpce_security_group_ids) > 0 ? var.existing_vpce_security_group_ids : [aws_security_group.vpce_sg[0].id]
-  lambda_rotator_sg_ids = var.use_existing_lambda_rotator_sg && length(var.existing_lambda_rotator_security_group_ids) > 0 ? var.existing_lambda_rotator_security_group_ids : [aws_security_group.rotator_lambda_security_group.id]
+  lambda_rotator_sg_ids = var.use_existing_lambda_rotator_sg && length(var.existing_lambda_rotator_security_group_ids) > 0 ? var.existing_lambda_rotator_security_group_ids : [aws_security_group.rotator_lambda_security_group[0].id]
 }
 # Security group for the VPC Interface Endpoint
 resource "aws_security_group" "vpce_sg" {
