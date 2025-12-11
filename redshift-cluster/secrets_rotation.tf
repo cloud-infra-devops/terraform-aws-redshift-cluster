@@ -203,41 +203,92 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_exec_policy_attachment" 
   role       = aws_iam_role.lambda_exec[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
-resource "aws_iam_role_policy_attachment" "lambda_custom_exec_policy_attachment" {
-  role       = aws_iam_role.lambda_exec[0].name
-  policy_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.cluster_identifier}-rotation-lambda-policy"
-}
-# Allow Lambda access to VPC for Secrets Manager VPC Endpoint
-resource "aws_iam_role_policy" "lambda_vpc" {
-  name = "${var.cluster_identifier}-lambda-vpc"
-  role = aws_iam_role.lambda_exec[0].id
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
+# resource "aws_iam_role_policy_attachment" "lambda_custom_exec_policy_attachment" {
+#   role       = aws_iam_role.lambda_exec[0].name
+#   policy_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/${var.cluster_identifier}-rotation-lambda-policy"
+# }
+
+# # Allow Lambda access to VPC for Secrets Manager VPC Endpoint
+# resource "aws_iam_role_policy" "lambda_vpc" {
+#   name = "${var.cluster_identifier}-lambda-vpc"
+#   role = aws_iam_role.lambda_exec[0].id
+#   policy = jsonencode({
+#     Version = "2012-10-17",
+#     Statement = [
+#       {
+#         Effect = "Allow",
+#         Action = [
+#           "ec2:CreateNetworkInterface",
+#           "ec2:DescribeNetworkInterfaces",
+#           "ec2:DeleteNetworkInterface"
+#         ],
+#         Resource = "*"
+#       },
+#       {
+#         Sid    = "AllowKMSForLambdaEnv",
+#         Effect = "Allow",
+#         Action = [
+#           "kms:Decrypt",
+#           "kms:Encrypt",
+#           "kms:GenerateDataKey",
+#           "kms:DescribeKey"
+#         ],
+#         Resource = ["${var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.kms_cmk_key) > 0 ? aws_kms_key.kms_cmk_key[0].arn : "")}"]
+#       }
+#     ]
+#   })
+# }
+
+# Tight inline policy attached to the Lambda role (existing from earlier)
+data "aws_iam_policy_document" "rotation_lambda_policy" {
+  count = var.enable_auto_secrets_rotation ? 1 : 0
+
+  dynamic "statement" {
+    for_each = [
       {
-        Effect = "Allow",
-        Action = [
-          "ec2:CreateNetworkInterface",
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DeleteNetworkInterface"
-        ],
-        Resource = "*"
+        sid       = "AllowNetworking"
+        actions   = ["ec2:CreateNetworkInterface", "ec2:DescribeNetworkInterfaces", "ec2:DeleteNetworkInterface"]
+        resources = ["*"]
       },
       {
-        Sid    = "AllowKMSForLambdaEnv",
-        Effect = "Allow",
-        Action = [
-          "kms:Decrypt",
-          "kms:Encrypt",
-          "kms:GenerateDataKey",
-          "kms:DescribeKey"
-        ],
-        Resource = ["${var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.kms_cmk_key) > 0 ? aws_kms_key.kms_cmk_key[0].arn : "")}"]
+        sid       = "AllowLambdaWriteLogs"
+        actions   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
+        resources = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
+      },
+      {
+        sid       = "AllowSecretsManager"
+        actions   = ["secretsmanager:GetSecretValue", "secretsmanager:PutSecretValue", "secretsmanager:DescribeSecret", "secretsmanager:UpdateSecretVersionStage"]
+        resources = ["arn:aws:secretsmanager:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:secret:${var.cluster_identifier}-${random_id.index.hex}"]
+      },
+      {
+        sid       = "AllowRedshiftModify"
+        actions   = ["redshift:ModifyCluster", "redshift:DescribeClusters"]
+        resources = ["arn:aws:redshift:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:cluster:${var.cluster_identifier}"]
+      },
+      {
+        sid       = "AllowKMS"
+        actions   = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey", "kms:DescribeKey"]
+        resources = var.kms_key_id != "" ? [var.kms_key_id] : (length(aws_kms_key.kms_cmk_key) > 0 ? [aws_kms_key.kms_cmk_key[0].arn] : [])
       }
     ]
-  })
+    content {
+      sid       = statement.value.sid
+      effect    = "Allow"
+      actions   = statement.value.actions
+      resources = statement.value.resources
+    }
+  }
 }
 
+resource "aws_iam_role_policy" "rotation_lambda_policy_attachment" {
+  # ensure the lambda exists before attaching the inline policy so we can reference its name in the policy document
+  depends_on = [aws_lambda_function.rotation]
+  count      = var.enable_auto_secrets_rotation ? 1 : 0
+  name       = "${var.cluster_identifier}-rotation-lambda-policy"
+  role       = aws_iam_role.lambda_exec[0].id
+  policy     = data.aws_iam_policy_document.rotation_lambda_policy[0].json
+}
+# Determine if Lambda should be deployed in VPC
 locals {
   lambda_has_vpc = length(var.subnet_ids) > 0 && length(var.existing_lambda_rotator_security_group_ids) > 0
 }
@@ -273,51 +324,6 @@ resource "aws_lambda_function" "rotation" {
       REGION             = data.aws_region.current.region
     }
   }
-}
-
-# Tight inline policy attached to the Lambda role (existing from earlier)
-data "aws_iam_policy_document" "rotation_lambda_policy" {
-  count = var.enable_auto_secrets_rotation ? 1 : 0
-
-  dynamic "statement" {
-    for_each = [
-      {
-        sid       = "AllowLambdaWriteLogs"
-        actions   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        resources = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
-      },
-      {
-        sid       = "AllowSecretsManager"
-        actions   = ["secretsmanager:GetSecretValue", "secretsmanager:PutSecretValue", "secretsmanager:DescribeSecret", "secretsmanager:UpdateSecretVersionStage"]
-        resources = ["arn:aws:secretsmanager:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:secret:${var.cluster_identifier}-${random_id.index.hex}"]
-      },
-      {
-        sid       = "AllowRedshiftModify"
-        actions   = ["redshift:ModifyCluster", "redshift:DescribeClusters"]
-        resources = ["arn:aws:redshift:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:cluster:${var.cluster_identifier}"]
-      },
-      {
-        sid       = "AllowKMS"
-        actions   = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"]
-        resources = var.kms_key_id != "" ? [var.kms_key_id] : (length(aws_kms_key.kms_cmk_key) > 0 ? [aws_kms_key.kms_cmk_key[0].arn] : [])
-      }
-    ]
-    content {
-      sid       = statement.value.sid
-      effect    = "Allow"
-      actions   = statement.value.actions
-      resources = statement.value.resources
-    }
-  }
-}
-
-resource "aws_iam_role_policy" "rotation_lambda_policy_attachment" {
-  # ensure the lambda exists before attaching the inline policy so we can reference its name in the policy document
-  depends_on = [aws_lambda_function.rotation]
-  count      = var.enable_auto_secrets_rotation ? 1 : 0
-  name       = "${var.cluster_identifier}-rotation-lambda-policy"
-  role       = aws_iam_role.lambda_exec[0].id
-  policy     = data.aws_iam_policy_document.rotation_lambda_policy[0].json
 }
 
 # Grant Secrets Manager permission to invoke the Lambda function.
