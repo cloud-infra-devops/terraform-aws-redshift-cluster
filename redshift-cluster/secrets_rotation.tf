@@ -20,7 +20,7 @@ resource "aws_security_group_rule" "vpce_ingress" {
   to_port                  = 443
   protocol                 = "tcp"
   source_security_group_id = var.security_group_ids[0]
-  security_group_id        = aws_security_group.vpce_sg.id
+  security_group_id        = aws_security_group.vpce_sg[0].id
 }
 resource "aws_security_group_rule" "vpce_egress" {
   type              = "egress"
@@ -28,7 +28,7 @@ resource "aws_security_group_rule" "vpce_egress" {
   to_port           = 0
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.vpce_sg.id
+  security_group_id = aws_security_group.vpce_sg[0].id
 }
 
 # Security group for the Rotator Lambda Function
@@ -46,7 +46,7 @@ resource "aws_security_group_rule" "lambda_security_group_egress_rule1" {
   to_port           = 443
   protocol          = "tcp"
   cidr_blocks       = [var.vpc_cidr]
-  security_group_id = aws_security_group.rotator_lambda_security_group.id
+  security_group_id = aws_security_group.rotator_lambda_security_group[0].id
 }
 resource "aws_security_group_rule" "lambda_security_group_egress_rule2" {
   type              = "egress"
@@ -54,7 +54,7 @@ resource "aws_security_group_rule" "lambda_security_group_egress_rule2" {
   to_port           = var.port
   protocol          = "tcp"
   cidr_blocks       = [var.vpc_cidr]
-  security_group_id = aws_security_group.rotator_lambda_security_group.id
+  security_group_id = aws_security_group.rotator_lambda_security_group[0].id
 }
 resource "aws_security_group_rule" "lambda_security_group_ingress_rule" {
   type              = "ingress"
@@ -62,7 +62,7 @@ resource "aws_security_group_rule" "lambda_security_group_ingress_rule" {
   to_port           = 0
   protocol          = "-1"
   cidr_blocks       = [var.vpc_cidr]
-  security_group_id = aws_security_group.rotator_lambda_security_group.id
+  security_group_id = aws_security_group.rotator_lambda_security_group[0].id
 }
 
 # VPC endpoint for Secrets Manager to keep rotation traffic inside VPC
