@@ -2,13 +2,13 @@
 # and typically should restrict source_arn to the secret ARN. We attach the permission
 # to the specific published Lambda version (qualifier) that we created.
 locals {
-  vpce_sg_ids           = var.use_existing_vpce_sg && length(var.existing_vpce_security_group_ids) > 0 ? var.existing_vpce_security_group_ids : [aws_security_group.vpce_sg[0].id]
-  lambda_rotator_sg_ids = var.use_existing_lambda_rotator_sg && length(var.existing_lambda_rotator_security_group_ids) > 0 ? var.existing_lambda_rotator_security_group_ids : [aws_security_group.rotator_lambda_security_group[0].id]
+  vpce_sg_ids           = var.use_existing_vpce_sg && length(var.existing_vpce_security_group_ids) > 0 ? var.existing_vpce_security_group_ids : [aws_security_group.vpce_sg.id]
+  lambda_rotator_sg_ids = var.use_existing_lambda_rotator_sg && length(var.existing_lambda_rotator_security_group_ids) > 0 ? var.existing_lambda_rotator_security_group_ids : [aws_security_group.rotator_lambda_security_group.id]
 }
 # Security group for the VPC Interface Endpoint
 resource "aws_security_group" "vpce_sg" {
-  depends_on  = [var.security_group_ids]
-  count       = var.use_existing_vpce_sg && length(var.existing_vpce_security_group_ids) > 0 ? 0 : 1
+  depends_on = [var.security_group_ids]
+  # count       = var.use_existing_vpce_sg && length(var.existing_vpce_security_group_ids) > 0 ? 0 : 1
   name        = "${var.cluster_identifier}-secretsmanager-vpce-sg"
   description = "SG for Secrets Manager VPC endpoint interface"
   vpc_id      = var.vpc_id
@@ -20,7 +20,7 @@ resource "aws_security_group_rule" "vpce_ingress" {
   to_port                  = 443
   protocol                 = "tcp"
   source_security_group_id = var.security_group_ids[0]
-  security_group_id        = aws_security_group.vpce_sg[0].id
+  security_group_id        = aws_security_group.vpce_sg.id
 }
 resource "aws_security_group_rule" "vpce_egress" {
   type              = "egress"
@@ -28,12 +28,12 @@ resource "aws_security_group_rule" "vpce_egress" {
   to_port           = 0
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.vpce_sg[0].id
+  security_group_id = aws_security_group.vpce_sg.id
 }
 
 # Security group for the Rotator Lambda Function
 resource "aws_security_group" "rotator_lambda_security_group" {
-  count  = var.use_existing_lambda_rotator_sg && length(var.existing_lambda_rotator_security_group_ids) > 0 ? 0 : 1
+  # count  = var.use_existing_lambda_rotator_sg && length(var.existing_lambda_rotator_security_group_ids) > 0 ? 0 : 1
   name   = "rotator_lambda_security_group"
   vpc_id = var.vpc_id
   tags = {
@@ -46,7 +46,7 @@ resource "aws_security_group_rule" "lambda_security_group_egress_rule1" {
   to_port           = 443
   protocol          = "tcp"
   cidr_blocks       = [var.vpc_cidr]
-  security_group_id = aws_security_group.rotator_lambda_security_group[0].id
+  security_group_id = aws_security_group.rotator_lambda_security_group.id
 }
 resource "aws_security_group_rule" "lambda_security_group_egress_rule2" {
   type              = "egress"
@@ -54,7 +54,7 @@ resource "aws_security_group_rule" "lambda_security_group_egress_rule2" {
   to_port           = var.port
   protocol          = "tcp"
   cidr_blocks       = [var.vpc_cidr]
-  security_group_id = aws_security_group.rotator_lambda_security_group[0].id
+  security_group_id = aws_security_group.rotator_lambda_security_group.id
 }
 resource "aws_security_group_rule" "lambda_security_group_ingress_rule" {
   type              = "ingress"
@@ -62,7 +62,7 @@ resource "aws_security_group_rule" "lambda_security_group_ingress_rule" {
   to_port           = 0
   protocol          = "-1"
   cidr_blocks       = [var.vpc_cidr]
-  security_group_id = aws_security_group.rotator_lambda_security_group[0].id
+  security_group_id = aws_security_group.rotator_lambda_security_group.id
 }
 
 # VPC endpoint for Secrets Manager to keep rotation traffic inside VPC
