@@ -117,15 +117,15 @@ resource "aws_iam_role_policy" "lambda_rotator_inline_policy" {
         ]
         Resource = ["${var.kms_key_id != "" ? var.kms_key_id : (length(aws_kms_key.kms_cmk_key) > 0 ? aws_kms_key.kms_cmk_key[0].arn : "")}"]
       },
-      {
-        Sid    = "AllowRDSPasswordUpdate"
-        Effect = "Allow"
-        Action = [
-          "rds:ModifyDBCluster",
-          "rds:DescribeDBClusters"
-        ]
-        Resource = aws_rds_cluster.this.arn
-      },
+      # {
+      #   Sid    = "AllowRDSPasswordUpdate"
+      #   Effect = "Allow"
+      #   Action = [
+      #     "rds:ModifyDBCluster",
+      #     "rds:DescribeDBClusters"
+      #   ]
+      #   Resource = aws_rds_cluster.this.arn
+      # },
       {
         Sid    = "AllowNetworkingToSecretsManager"
         Effect = "Allow"
@@ -211,7 +211,7 @@ resource "aws_iam_role_policy_attachment" "lambda_custom_exec_policy_attachment"
 # Allow Lambda access to VPC for Secrets Manager VPC Endpoint
 resource "aws_iam_role_policy" "lambda_vpc" {
   name = "${var.cluster_identifier}-lambda-vpc"
-  role = aws_iam_role.lambda_exec.id
+  role = aws_iam_role.lambda_exec[0].id
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -245,7 +245,7 @@ locals {
 
 # Create the Lambda function
 resource "aws_lambda_function" "rotation" {
-  depends_on = [aws_iam_role.rotation_lambda]
+  depends_on = [aws_iam_role.lambda_exec]
   count      = var.enable_auto_secrets_rotation ? 1 : 0
 
   filename         = data.archive_file.rotation_zip.output_path
@@ -253,7 +253,7 @@ resource "aws_lambda_function" "rotation" {
   function_name    = "${var.cluster_identifier}-secrets-rotation"
   handler          = "rotation_handler.lambda_handler"
   runtime          = "python3.12"
-  role             = aws_iam_role.rotation_lambda[0].arn
+  role             = aws_iam_role.lambda_exec[0].arn
   timeout          = 300
   publish          = true
   architectures    = ["x86_64"]

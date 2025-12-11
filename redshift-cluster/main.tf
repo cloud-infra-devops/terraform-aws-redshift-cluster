@@ -136,7 +136,7 @@ resource "aws_kms_alias" "logs_key_alias" {
   depends_on    = [aws_kms_key.kms_cmk_key]
   count         = local.use_existing_kms || length(trimspace(var.kms_key_alias)) == 0 ? 0 : 1
   name          = "alias/${var.kms_key_alias}"
-  target_key_id = aws_kms_key.logs_key[0].key_id
+  target_key_id = aws_kms_key.kms_cmk_key[0].key_id
 }
 
 # S3 bucket for logs (optional)

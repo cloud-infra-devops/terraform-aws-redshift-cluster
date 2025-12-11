@@ -62,7 +62,7 @@ data "aws_iam_policy_document" "redshift_policy" {
       "kms:GenerateDataKey",
       "kms:DescribeKey"
     ]
-    resources = var.kms_key_id != "" ? [var.kms_key_id] : (length(aws_kms_key.logs_key) > 0 ? [aws_kms_key.logs_key[0].arn] : [])
+    resources = var.kms_key_id != "" ? [var.kms_key_id] : (length(aws_kms_key.kms_cmk_key) > 0 ? [aws_kms_key.kms_cmk_key[0].arn] : [])
   }
 }
 
