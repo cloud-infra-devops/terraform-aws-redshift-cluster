@@ -285,22 +285,22 @@ data "aws_iam_policy_document" "rotation_lambda_policy" {
       {
         sid       = "AllowLambdaWriteLogs"
         actions   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        resources = ["arn:aws:logs:${data.aws_region.current.region != "" ? data.aws_region.current.region : data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
+        resources = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
       },
       {
         sid       = "AllowSecretsManager"
         actions   = ["secretsmanager:GetSecretValue", "secretsmanager:PutSecretValue", "secretsmanager:DescribeSecret", "secretsmanager:UpdateSecretVersionStage"]
-        resources = [aws_secretsmanager_secret.this.arn]
+        resources = ["arn:aws:secretsmanager:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:secret:${var.cluster_identifier}-${random_id.index.hex}"]
       },
       {
         sid       = "AllowRedshiftModify"
         actions   = ["redshift:ModifyCluster", "redshift:DescribeClusters"]
-        resources = ["arn:aws:redshift:${data.aws_region.current.region != "" ? data.aws_region.current.region : data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:cluster:${var.cluster_identifier}"]
+        resources = ["arn:aws:redshift:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:cluster:${var.cluster_identifier}"]
       },
       {
         sid       = "AllowKMS"
         actions   = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"]
-        resources = var.kms_key_id != "" ? [var.kms_key_id] : (length(aws_kms_key.logs_key) > 0 ? [aws_kms_key.logs_key[0].arn] : [])
+        resources = var.kms_key_id != "" ? [var.kms_key_id] : (length(aws_kms_key.kms_cmk_key) > 0 ? [aws_kms_key.kms_cmk_key[0].arn] : [])
       }
     ]
     content {
@@ -317,7 +317,7 @@ resource "aws_iam_role_policy" "rotation_lambda_policy_attachment" {
   depends_on = [aws_lambda_function.rotation]
   count      = var.enable_auto_secrets_rotation ? 1 : 0
   name       = "${var.cluster_identifier}-rotation-lambda-policy"
-  role       = aws_iam_role.rotation_lambda[0].id
+  role       = aws_iam_role.lambda_exec[0].id
   policy     = data.aws_iam_policy_document.rotation_lambda_policy[0].json
 }
 
@@ -341,7 +341,7 @@ resource "aws_lambda_permission" "allow_secretsmanager_invoke" {
 resource "aws_secretsmanager_secret_rotation" "rotation" {
   depends_on = [
     aws_lambda_permission.allow_secretsmanager_invoke,
-    aws_iam_role_policy.rotation_lambda_policy_attach
+    aws_lambda_function.rotation
   ]
   count = var.enable_auto_secrets_rotation ? 1 : 0
 

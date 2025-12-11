@@ -112,7 +112,7 @@ locals {
 
 # Secrets Manager secret (no version yet)
 resource "aws_secretsmanager_secret" "this" {
-  name        = "${var.cluster_identifier}-credentials-${random_id.index.hex}"
+  name        = "${var.cluster_identifier}-${random_id.index.hex}"
   description = "Redshift cluster credentials for ${var.cluster_identifier}"
   tags = merge(var.tags, {
     "redshift-cluster" = var.cluster_identifier
