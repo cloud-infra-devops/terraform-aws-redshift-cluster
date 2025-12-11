@@ -6,7 +6,7 @@ locals {
   lambda_rotator_sg_ids = var.use_existing_lambda_rotator_sg && length(var.existing_lambda_rotator_security_group_ids) > 0 ? var.existing_lambda_rotator_security_group_ids : [aws_security_group.rotator_lambda_security_group.id]
 }
 # Security group for the VPC Interface Endpoint
-resource "aws_security_group" "vpce" {
+resource "aws_security_group" "vpce_sg" {
   depends_on  = [var.security_group_ids]
   name        = "${var.cluster_identifier}-secretsmanager-vpce-sg"
   description = "SG for Secrets Manager VPC endpoint interface"
@@ -19,7 +19,7 @@ resource "aws_security_group_rule" "vpce_ingress" {
   to_port                  = 443
   protocol                 = "tcp"
   source_security_group_id = var.security_group_ids[0]
-  security_group_id        = aws_security_group.vpce.id
+  security_group_id        = aws_security_group.vpce_sg.id
 }
 resource "aws_security_group_rule" "vpce_egress" {
   type              = "egress"
@@ -27,7 +27,7 @@ resource "aws_security_group_rule" "vpce_egress" {
   to_port           = 0
   protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
-  security_group_id = aws_security_group.vpce.id
+  security_group_id = aws_security_group.vpce_sg.id
 }
 
 # Security group for the Rotator Lambda Function
@@ -144,7 +144,7 @@ resource "aws_iam_role_policy" "lambda_rotator_inline_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "*"
+        Resource = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
       }
     ]
   })
