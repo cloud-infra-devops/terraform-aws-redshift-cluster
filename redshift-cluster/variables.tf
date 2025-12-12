@@ -49,25 +49,25 @@ variable "node_type" {
   description = "Redshift node type"
   type        = string
   default     = "ra3.xlplus"
-  # validation {
-  #   condition     = contains(var.allowed_node_types, var.node_type)
-  #   error_message = "node_type '${var.node_type}' is not in allowed_node_types. Update var.node_type or allowed_node_types for your region/account."
-  # }
+  validation {
+    condition     = contains(var.allowed_node_types, var.node_type)
+    error_message = "node_type '${var.node_type}' is not in allowed_node_types. Update var.node_type or allowed_node_types for your region/account."
+  }
 }
 
-# variable "allowed_node_types" {
-#   description = "Optional whitelist of node types the module will accept. Adjust for your account/region."
-#   type        = list(string)
-#   default = [
-#     "ra3.xlplus",
-#     "ra3.4xlarge",
-#     "ra3.16xlarge",
-#     "dc2.large",
-#     "dc2.8xlarge",
-#     "ds2.xlarge",
-#     "ds2.8xlarge"
-#   ]
-# }
+variable "allowed_node_types" {
+  description = "Optional whitelist of node types the module will accept. Adjust for your account/region."
+  type        = list(string)
+  default = [
+    "ra3.xlplus",
+    "ra3.4xlarge",
+    "ra3.16xlarge",
+    "dc2.large",
+    "dc2.8xlarge",
+    "ds2.xlarge",
+    "ds2.8xlarge"
+  ]
+}
 
 variable "cluster_type" {
   description = "Redshift cluster type (single-node or multi-node)"
@@ -104,7 +104,7 @@ variable "use_existing_redshift_sg" {
 variable "existing_redshift_security_group_ids" {
   description = "List of security group IDs to associate with the Redshift cluster"
   type        = list(string)
-  default     = ["sg-0f4abeaf16c9059b7"]
+  default     = ["sg-0de16399c9a9f8f6e"]
 }
 variable "use_existing_vpce_sg" {
   type = bool
@@ -112,7 +112,7 @@ variable "use_existing_vpce_sg" {
 variable "existing_vpce_security_group_ids" {
   description = "Existing Security group IDs allowed for VPC Interface Endpoint"
   type        = list(string)
-  default     = ["sg-0b53f81397d5a2a87"]
+  default     = ["sg-0de16399c9a9f8f6e"]
 }
 variable "use_existing_lambda_rotator_sg" {
   type = bool
@@ -121,7 +121,7 @@ variable "use_existing_lambda_rotator_sg" {
 variable "existing_lambda_rotator_security_group_ids" {
   description = "Existing Security group IDs for the rotation Lambda when placed in VPC. Must be provided if subnet_ids is provided."
   type        = list(string)
-  default     = ["sg-0b1f1e3989f1804f2"]
+  default     = ["sg-0de16399c9a9f8f6e"]
 }
 
 variable "port" {
