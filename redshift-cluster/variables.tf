@@ -26,17 +26,17 @@ EOT
   default     = ""
   sensitive   = true
 
-  # validation {
-  #   condition = var.master_password == "" || (
-  #     length(var.master_password) >= 8 &&
-  #     length(var.master_password) <= 64 &&
-  #     length(regex("[A-Z]", var.master_password)) > 0 &&      # has uppercase
-  #     length(regex("[a-z]", var.master_password)) > 0 &&      # has lowercase
-  #     length(regex("[0-9]", var.master_password)) > 0 &&      # has digit
-  #     length(regex("[/@\"\\\\' ]", var.master_password)) == 0 # does NOT contain forbidden chars: / @ " \ ' or space
-  #   )
-  #   error_message = "master_password must be empty (to auto-generate) or 8-64 chars, include at least one upper, one lower, one digit, and must not contain / @ \" \\ ' or spaces."
-  # }
+  validation {
+    condition = var.master_password == "" || (
+      length(var.master_password) >= 8 &&
+      length(var.master_password) <= 64 &&
+      length(regex("[A-Z]", var.master_password)) > 0 &&      # has uppercase
+      length(regex("[a-z]", var.master_password)) > 0 &&      # has lowercase
+      length(regex("[0-9]", var.master_password)) > 0 &&      # has digit
+      length(regex("[/@\"\\\\' ]", var.master_password)) == 0 # does NOT contain forbidden chars: / @ " \ ' or space
+    )
+    error_message = "master_password must be empty (to auto-generate) or 8-64 chars, include at least one upper, one lower, one digit, and must not contain / @ \" \\ ' or spaces."
+  }
 }
 
 variable "generate_password" {

@@ -13,9 +13,9 @@ module "redshift" {
   vpc_cidr   = "172.16.0.0/16"
   subnet_ids = ["subnet-0260bb197628ace27", "subnet-0d316885c8257bf12"]
 
-  use_existing_redshift_sg       = true
-  use_existing_lambda_rotator_sg = true
-  use_existing_vpce_sg           = true
+  use_existing_redshift_sg       = false
+  use_existing_lambda_rotator_sg = false
+  use_existing_vpce_sg           = false
   # existing_vpce_security_group_ids = module.sg-module.vpc_endpoint_sg
   # existing_redshift_security_group_ids = module.sg-module.redshift_sg
   # existing_lambda_rotator_security_group_ids = module.sg-module.lambda_rotate_sql_server_sg
