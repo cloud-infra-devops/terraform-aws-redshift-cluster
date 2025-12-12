@@ -15,7 +15,7 @@ locals {
   # account and region
   account_id = data.aws_caller_identity.current.account_id
   # region     = var.region != "" ? var.region : data.aws_region.current.name
-  region = data.aws_region.current.region
+  region = data.aws_region.current.name
 
   # rotation lambda role arn only present when rotation_enabled and role count > 0
   rotation_role_arn = var.enable_auto_secrets_rotation && length(aws_iam_role.lambda_exec) > 0 ? aws_iam_role.lambda_exec[0].arn : ""
@@ -88,35 +88,20 @@ resource "random_id" "index" {
 }
 
 resource "random_password" "master" {
-  count = var.generate_password && !local.master_password_provided ? 1 : 0
-
-  # Choose length between 16 and 32 by default (Redshift requires 8..64)
-  length = 16
-
-  # Ensure upper, lower and numeric characters are present (Redshift requires at least one of each)
+  count   = var.generate_password && !local.master_password_provided ? 1 : 0
+  length  = 24
   upper   = true
   lower   = true
   numeric = true
-
-  # Provide a safe override of special characters that avoids Redshift-disallowed characters:
-  # Forbidden characters per Redshift API: / @ "  space  \  '
-  # So we intentionally exclude those from override.
-  special          = true
+  special = true
+  # Exclude Redshift-forbidden chars: / @ " space \ '
   override_special = "!#$%&()*-_=+[]{}<>?.,:;~`|"
 }
 
-# Use generated password or provided one
+# local to pick generated or provided password with consistent name
 locals {
   generated_master_password = length(random_password.master) > 0 ? random_password.master[0].result : ""
-}
-
-# Secrets Manager secret (no version yet)
-resource "aws_secretsmanager_secret" "this" {
-  name        = "${var.cluster_identifier}-${random_id.index.hex}"
-  description = "Redshift cluster credentials for ${var.cluster_identifier}"
-  tags = merge(var.tags, {
-    "redshift-cluster" = var.cluster_identifier
-  })
+  final_master_password     = local.master_password_provided ? var.master_password : local.generated_master_password
 }
 
 # KMS key for logs & cluster encryption (created if not provided)
@@ -245,14 +230,14 @@ resource "aws_redshift_cluster" "this" {
   cluster_identifier = var.cluster_identifier
   database_name      = var.database_name
   master_username    = var.master_username
+  master_password    = local.final_master_password
+  # master_password = local.master_password_provided ? var.master_password : local.generated_master_password
 
-  master_password = local.master_password_provided ? var.master_password : local.generated_master_password
-
-  node_type       = var.node_type
-  cluster_type    = var.cluster_type
-  number_of_nodes = var.cluster_type == "multi-node" ? var.number_of_nodes : 1
-
-  vpc_security_group_ids    = var.security_group_ids
+  node_type                 = var.node_type
+  cluster_type              = var.cluster_type
+  number_of_nodes           = var.cluster_type == "multi-node" ? var.number_of_nodes : 1
+  publicly_accessible       = false
+  vpc_security_group_ids    = var.existing_redshift_security_group_ids
   cluster_subnet_group_name = local.use_existing_subnet_group ? var.cluster_subnet_group_name : aws_redshift_subnet_group.this[0].id
 
   iam_roles = [aws_iam_role.redshift.arn]
@@ -288,17 +273,3 @@ resource "aws_redshift_cluster" "this" {
 #   log_exports          = []
 # }
 
-# After cluster exists, create/update Secrets Manager secret version with full details (credentials + endpoint/jdbc)
-resource "aws_secretsmanager_secret_version" "this" {
-  depends_on = [aws_secretsmanager_secret.this, aws_redshift_cluster.this]
-  secret_id  = aws_secretsmanager_secret.this.id
-  secret_string = jsonencode({
-    username = var.master_username
-    password = local.master_password_provided ? var.master_password : local.generated_master_password
-    engine   = "redshift"
-    host     = aws_redshift_cluster.this.endpoint
-    port     = aws_redshift_cluster.this.port
-    dbname   = var.database_name
-    jdbc     = "jdbc:redshift://${aws_redshift_cluster.this.endpoint}:/${var.database_name}"
-  })
-}

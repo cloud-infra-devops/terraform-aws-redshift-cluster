@@ -26,17 +26,17 @@ EOT
   default     = ""
   sensitive   = true
 
-  validation {
-    condition = var.master_password == "" || (
-      length(var.master_password) >= 8 &&
-      length(var.master_password) <= 64 &&
-      can(regex("[A-Z]", var.master_password)) &&      # has uppercase
-      can(regex("[a-z]", var.master_password)) &&      # has lowercase
-      can(regex("[0-9]", var.master_password)) &&      # has digit
-      !can(regex("[/@\"\\\\' ]", var.master_password)) # does NOT contain forbidden chars: / @ " \ ' or space
-    )
-    error_message = "master_password must be empty (to auto-generate) or 8-64 chars, include at least one upper, one lower, one digit, and must not contain / @ \" \\ ' or spaces."
-  }
+  # validation {
+  #   condition = var.master_password == "" || (
+  #     length(var.master_password) >= 8 &&
+  #     length(var.master_password) <= 64 &&
+  #     length(regex("[A-Z]", var.master_password)) > 0 &&      # has uppercase
+  #     length(regex("[a-z]", var.master_password)) > 0 &&      # has lowercase
+  #     length(regex("[0-9]", var.master_password)) > 0 &&      # has digit
+  #     length(regex("[/@\"\\\\' ]", var.master_password)) == 0 # does NOT contain forbidden chars: / @ " \ ' or space
+  #   )
+  #   error_message = "master_password must be empty (to auto-generate) or 8-64 chars, include at least one upper, one lower, one digit, and must not contain / @ \" \\ ' or spaces."
+  # }
 }
 
 variable "generate_password" {
@@ -49,25 +49,25 @@ variable "node_type" {
   description = "Redshift node type"
   type        = string
   default     = "ra3.xlplus"
-  validation {
-    condition     = contains(var.allowed_node_types, var.node_type)
-    error_message = "node_type '${var.node_type}' is not in allowed_node_types. Update var.node_type or allowed_node_types for your region/account."
-  }
+  # validation {
+  #   condition     = contains(var.allowed_node_types, var.node_type)
+  #   error_message = "node_type '${var.node_type}' is not in allowed_node_types. Update var.node_type or allowed_node_types for your region/account."
+  # }
 }
 
-variable "allowed_node_types" {
-  description = "Optional whitelist of node types the module will accept. Adjust for your account/region."
-  type        = list(string)
-  default = [
-    "ra3.xlplus",
-    "ra3.4xlarge",
-    "ra3.16xlarge",
-    "dc2.large",
-    "dc2.8xlarge",
-    "ds2.xlarge",
-    "ds2.8xlarge"
-  ]
-}
+# variable "allowed_node_types" {
+#   description = "Optional whitelist of node types the module will accept. Adjust for your account/region."
+#   type        = list(string)
+#   default = [
+#     "ra3.xlplus",
+#     "ra3.4xlarge",
+#     "ra3.16xlarge",
+#     "dc2.large",
+#     "dc2.8xlarge",
+#     "ds2.xlarge",
+#     "ds2.8xlarge"
+#   ]
+# }
 
 variable "cluster_type" {
   description = "Redshift cluster type (single-node or multi-node)"
@@ -97,26 +97,31 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-variable "security_group_ids" {
-  description = "List of security group IDs to associate with the cluster"
-  type        = list(string)
+variable "use_existing_redshift_sg" {
+  type = bool
+  # default = true
 }
-
+variable "existing_redshift_security_group_ids" {
+  description = "List of security group IDs to associate with the Redshift cluster"
+  type        = list(string)
+  default     = ["sg-0f4abeaf16c9059b7"]
+}
 variable "use_existing_vpce_sg" {
   type = bool
 }
 variable "existing_vpce_security_group_ids" {
   description = "Existing Security group IDs allowed for VPC Interface Endpoint"
   type        = list(string)
-  # default     = []
+  default     = ["sg-0b53f81397d5a2a87"]
 }
 variable "use_existing_lambda_rotator_sg" {
   type = bool
+  # default = true
 }
 variable "existing_lambda_rotator_security_group_ids" {
   description = "Existing Security group IDs for the rotation Lambda when placed in VPC. Must be provided if subnet_ids is provided."
   type        = list(string)
-  # default     = []
+  default     = ["sg-0b1f1e3989f1804f2"]
 }
 
 variable "port" {

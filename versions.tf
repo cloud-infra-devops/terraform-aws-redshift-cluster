@@ -1,18 +1,14 @@
 terraform {
-  required_version = ">= 1.14.0"
+  required_version = ">= 1.0"
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 6.25.0, < 7.0.0"
+      version = ">= 6.25.0"
     }
     random = {
       source  = "hashicorp/random"
       version = ">= 3.0"
-    }
-    archive = {
-      source  = "hashicorp/archive"
-      version = ">= 2.2.0"
     }
   }
   cloud {
@@ -25,6 +21,6 @@ terraform {
 }
 
 provider "aws" {
-  region              = "us-west-2"
-  allowed_account_ids = ["211125325120"]
+  region              = var.aws_region
+  allowed_account_ids = [var.aws_account_id]
 }
