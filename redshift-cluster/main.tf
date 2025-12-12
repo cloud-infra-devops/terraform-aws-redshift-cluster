@@ -14,8 +14,8 @@ locals {
 
   # account and region
   account_id = data.aws_caller_identity.current.account_id
-  # region     = var.region != "" ? var.region : data.aws_region.current.name
-  region = data.aws_region.current.name
+  # region     = var.region != "" ? var.region : data.aws_region.current.region
+  region = data.aws_region.current.region
 
   # rotation lambda role arn only present when rotation_enabled and role count > 0
   rotation_role_arn = var.enable_auto_secrets_rotation && length(aws_iam_role.lambda_exec) > 0 ? aws_iam_role.lambda_exec[0].arn : ""

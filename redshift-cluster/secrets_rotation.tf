@@ -99,7 +99,7 @@ resource "aws_security_group_rule" "lambda_security_group_ingress_rule" {
 # VPC endpoint for Secrets Manager to keep rotation traffic inside VPC
 resource "aws_vpc_endpoint" "secretsmanager-vpce" {
   vpc_id             = var.vpc_id
-  service_name       = "com.amazonaws.${data.aws_region.current.name}.secretsmanager"
+  service_name       = "com.amazonaws.${data.aws_region.current.region}.secretsmanager"
   vpc_endpoint_type  = "Interface"
   subnet_ids         = var.subnet_ids
   security_group_ids = [local.vpce_sg_ids]
@@ -168,7 +168,7 @@ resource "aws_iam_role_policy" "lambda_rotator_inline_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = ["arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
+        Resource = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
       }
     ]
   })
@@ -224,17 +224,17 @@ data "aws_iam_policy_document" "rotation_lambda_policy" {
       {
         sid       = "AllowLambdaWriteLogs"
         actions   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        resources = ["arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
+        resources = ["arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${aws_lambda_function.rotation[0].function_name}:*"]
       },
       {
         sid       = "AllowSecretsManager"
         actions   = ["secretsmanager:GetSecretValue", "secretsmanager:PutSecretValue", "secretsmanager:DescribeSecret", "secretsmanager:UpdateSecretVersionStage"]
-        resources = ["arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:${var.cluster_identifier}-${random_id.index.hex}"]
+        resources = ["arn:aws:secretsmanager:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:secret:${var.cluster_identifier}-${random_id.index.hex}"]
       },
       {
         sid       = "AllowRedshiftModify"
         actions   = ["redshift:ModifyCluster", "redshift:DescribeClusters"]
-        resources = ["arn:aws:redshift:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:cluster:${var.cluster_identifier}"]
+        resources = ["arn:aws:redshift:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:cluster:${var.cluster_identifier}"]
       },
       {
         sid       = "AllowKMS"
@@ -293,7 +293,7 @@ resource "aws_lambda_function" "rotation" {
     variables = {
       CLUSTER_IDENTIFIER = var.cluster_identifier
       SECRET_ARN         = aws_secretsmanager_secret.this.arn
-      REGION             = data.aws_region.current.name
+      REGION             = data.aws_region.current.region
     }
   }
 }
